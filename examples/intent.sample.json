@@ -1,0 +1,7 @@
+{
+  "type": "git.merge",
+  "agentId": "agt_demo",
+  "environment": "personal_private",
+  "connectorId": "github",
+  "target": "main"
+}

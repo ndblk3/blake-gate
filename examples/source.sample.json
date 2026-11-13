@@ -1,0 +1,13 @@
+{
+  "agentId": "agt_demo",
+  "ownerId": "own_demo",
+  "environment": "personal_private",
+  "enabled": true,
+  "killSwitch": false,
+  "reviewMode": "autonomous",
+  "autoMerge": false,
+  "connectors": [
+    { "id": "github", "tier": "write" }
+  ],
+  "stops": "No send. No force-push."
+}
