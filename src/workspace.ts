@@ -1,5 +1,6 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { policyHash } from "./artifact.js";
 import type { CompiledPolicy } from "./types.js";
 
 export type MaterializedPolicy = {
@@ -7,11 +8,13 @@ export type MaterializedPolicy = {
   policyPath: string;
   readmePath: string;
   gateScriptPath: string;
+  historyPath: string;
 };
 
 /**
  * Drop a machine-readable policy + local gate script into a workspace.
- * Any runner (Cursor, custom, CI) can call the script before dangerous actions.
+ * Any runner (Cursor, Claude Code, custom worker, GitHub Actions) can call
+ * the script before dangerous actions — same contract, cross-host.
  */
 export async function materializePolicyWorkspace(
   workspaceDir: string,
@@ -22,17 +25,40 @@ export async function materializePolicyWorkspace(
   const policyPath = path.join(dir, "policy.json");
   const readmePath = path.join(dir, "README.md");
   const gateScriptPath = path.join(dir, "gate.mjs");
+  const historyPath = path.join(dir, "policy-history.jsonl");
 
-  await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`, "utf8");
+  const artifact = {
+    ...policy,
+    policyHash: policy.policyHash ?? policyHash(policy),
+  };
+
+  await writeFile(policyPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+  await appendFile(
+    historyPath,
+    `${JSON.stringify({
+      at: artifact.compiledAt ?? new Date().toISOString(),
+      version: artifact.version ?? 1,
+      policyHash: artifact.policyHash,
+      previousHash: artifact.previousHash ?? null,
+      autoMerge: artifact.autoMerge,
+      reviewMode: artifact.reviewMode,
+      environment: artifact.environment,
+    })}\n`,
+    "utf8",
+  );
   await writeFile(
     readmePath,
     [
       "# blake-policy (local copy)",
       "",
-      "This folder is written by the host before each agent run.",
+      "Policy as artifact — not a prompt. Host compiles; runners verify.",
       "",
-      "- `policy.json` — compiled rules (autoMerge, stops, connectors, env).",
-      "- `gate.mjs` — evaluate an intent against that policy.",
+      "- `policy.json` — compiled rules + `policyHash` / version.",
+      "- `policy-history.jsonl` — what changed for this agent over time.",
+      "- `gate.mjs` — evaluate an intent (exit 0 allow · 2 approval · 1 deny).",
+      "",
+      "Proof-carrying allow: set `BLAKE_POLICY_SECRET` and require `allowToken`",
+      "before merge/send in your runner.",
       "",
       "Example:",
       "",
@@ -40,24 +66,18 @@ export async function materializePolicyWorkspace(
       'node .blake-policy/gate.mjs \'{"type":"git.merge","agentId":"…","environment":"personal_private","connectorId":"github"}\'',
       "```",
       "",
-      "Exit codes: 0 allow · 2 require_approval · 1 deny/error",
-      "",
     ].join("\n"),
     "utf8",
   );
 
-  // Self-contained evaluator so foreign runners need only Node — not the npm package.
-  await writeFile(
-    gateScriptPath,
-    `${GATE_SCRIPT}\n`,
-    "utf8",
-  );
+  await writeFile(gateScriptPath, `${GATE_SCRIPT}\n`, "utf8");
 
-  return { dir, policyPath, readmePath, gateScriptPath };
+  return { dir, policyPath, readmePath, gateScriptPath, historyPath };
 }
 
 /** Minimal inline gate for workspaces without node_modules linkage. */
 const GATE_SCRIPT = String.raw`#!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,6 +99,14 @@ const WRITE = new Set([
   "git.push","git.force_push","git.open_pr","git.merge",
   "mail.send","chat.send","outbound.publish",
 ]);
+
+function fingerprint(i) {
+  const repo = String(i.meta?.repo ?? i.meta?.repoFullName ?? "");
+  const branch = String(i.meta?.branch ?? "");
+  const parts = [i.type, i.agentId, i.environment, i.connectorId ?? "", i.target ?? "", repo, branch]
+    .map((p) => String(p).trim().toLowerCase());
+  return "ifp_" + createHash("sha256").update(parts.join("|")).digest("hex").slice(0, 24);
+}
 
 function decide() {
   const reasons = [];
@@ -118,7 +146,15 @@ function decide() {
 }
 
 function out(effect, reasons, rules) {
-  return { effect, reasons, rules, at: now, intent };
+  return {
+    effect,
+    reasons,
+    rules,
+    at: now,
+    intent,
+    fingerprint: fingerprint(intent),
+    policyHash: policy.policyHash || null,
+  };
 }
 
 const decision = decide();

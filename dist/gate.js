@@ -1,5 +1,8 @@
+import { policyHash } from "./artifact.js";
 import { trustAtLeast } from "./compile.js";
 import { evaluateSecretAccess } from "./credentials.js";
+import { intentFingerprint } from "./fingerprint.js";
+import { signAllowToken } from "./proof.js";
 const WRITE_INTENTS = [
     "git.push",
     "git.force_push",
@@ -38,7 +41,6 @@ function stopHits(policy, intent) {
     const hits = [];
     for (const rule of policy.stopRules) {
         const key = rule.toLowerCase();
-        // Keyword / phrase match against intent surface.
         if ((intent.type === "git.force_push" && /force[- ]?push|no force/i.test(rule)) ||
             (intent.type === "git.merge" && /\bno merge\b|do not merge|don't merge/i.test(rule)) ||
             (intent.type === "mail.send" && /\bno send\b|do not send|don't send|no outbound/i.test(rule)) ||
@@ -49,9 +51,10 @@ function stopHits(policy, intent) {
     }
     return hits;
 }
-function decide(policy, intent, context) {
+function decide(policy, intent, context, fingerprint) {
     const reasons = [];
     const rules = [];
+    const hash = policy.policyHash ?? policyHash(policy);
     if (policy.killSwitch) {
         return {
             effect: "deny",
@@ -60,7 +63,6 @@ function decide(policy, intent, context) {
             rules: ["fleet.kill_switch"],
         };
     }
-    // Practice may start while the agent is still Draft / off for live schedule.
     if (!policy.enabled &&
         !(context.practice === true && intent.type === "run.start")) {
         return {
@@ -139,12 +141,19 @@ function decide(policy, intent, context) {
             };
         }
     }
-    // Merge: autoMerge off → owner review (not a hard deny from “no merge” stops).
+    const durableOk = context.approvals?.has(fingerprint, {
+        now: context.now,
+        policyHash: hash,
+    }) === true;
     if (intent.type === "git.merge") {
         if (!policy.autoMerge) {
-            if (context.ownerApproved) {
-                reasons.push("Owner approved merge.");
-                rules.push("git.merge.owner_approved");
+            if (context.ownerApproved || durableOk) {
+                reasons.push(durableOk && !context.ownerApproved
+                    ? "Durable approval ticket matches fingerprint."
+                    : "Owner approved merge.");
+                rules.push(durableOk && !context.ownerApproved
+                    ? "approval.durable"
+                    : "git.merge.owner_approved");
                 return { effect: "allow", intent, reasons, rules };
             }
             return {
@@ -182,7 +191,7 @@ function decide(policy, intent, context) {
     if (policy.reviewMode === "notify" &&
         WRITE_INTENTS.includes(intent.type) &&
         intent.type !== "git.merge") {
-        if (!context.ownerApproved) {
+        if (!context.ownerApproved && !durableOk) {
             return {
                 effect: "require_approval",
                 intent,
@@ -190,8 +199,12 @@ function decide(policy, intent, context) {
                 rules: ["review.notify"],
             };
         }
-        reasons.push("Owner approved under notify mode.");
-        rules.push("review.approved");
+        reasons.push(durableOk && !context.ownerApproved
+            ? "Durable approval ticket matches fingerprint."
+            : "Owner approved under notify mode.");
+        rules.push(durableOk && !context.ownerApproved
+            ? "approval.durable"
+            : "review.approved");
     }
     if (intent.type === "run.start") {
         reasons.push("Run start allowed.");
@@ -204,11 +217,24 @@ function decide(policy, intent, context) {
     return { effect: "allow", intent, reasons, rules };
 }
 export function evaluateIntent(intent, policy, context, audit) {
-    const partial = decide(policy, intent, context);
-    const decision = {
+    const fingerprint = intentFingerprint(intent);
+    const hash = policy.policyHash ?? policyHash(policy);
+    const partial = decide(policy, intent, context, fingerprint);
+    let decision = {
         ...partial,
         at: context.now || new Date().toISOString(),
+        fingerprint,
+        policyHash: hash,
     };
+    if (decision.effect === "allow" && context.signingSecret) {
+        decision = {
+            ...decision,
+            allowToken: signAllowToken(decision, policy, context.signingSecret, {
+                expiresAt: context.allowTokenExpiresAt,
+                fingerprint,
+            }),
+        };
+    }
     audit?.append({
         at: decision.at,
         ownerId: policy.ownerId,
@@ -219,6 +245,7 @@ export function evaluateIntent(intent, policy, context, audit) {
         reasons: decision.reasons,
         rules: decision.rules,
         target: intent.target,
+        fingerprint,
     });
     return decision;
 }

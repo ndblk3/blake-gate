@@ -2,11 +2,19 @@
 
 Policy enforcement runtime for autonomous agents.
 
-The model proposes **intents**. This package decides **allow / deny / require_approval** — outside the LLM — and can write a local gate into any workspace.
+The model proposes **intents**. This package decides **allow / deny / require_approval** — outside the LLM — with:
+
+1. **Intent fingerprints + durable approval** — capability tickets, not chat moderation  
+2. **Proof-carrying allow** — signed `allowToken`; runner/CI verifies before merge/send  
+3. **Hire / dual-env isolation** — testable compliance suite (`blake-policy hire-check`)  
+4. **Post-action compliance** — gate before, audit after; prompt ≠ fact → violation  
+5. **Policy as artifact** — versioned `policy.json` + hash + diffs  
+6. **Cross-host contract** — Cursor CLI · Claude Code · custom workers · GitHub Actions  
+7. **ApprovalRequest** — thin delivery adapters (webhook / email / Slack); core stays runtime  
 
 **Docs (Blake):** [bl4k3.com/policy](https://bl4k3.com/policy)  
 **Repo:** [github.com/ndblk3/blake-policy-agent](https://github.com/ndblk3/blake-policy-agent)  
-**License:** Apache-2.0
+**License:** Apache-2.0 · **npm:** `blake-policy-agent@0.2.0`
 
 ## Install
 
@@ -14,16 +22,18 @@ The model proposes **intents**. This package decides **allow / deny / require_ap
 npm install blake-policy-agent
 ```
 
-```bash
-npm test   # build + unit tests
-```
-
-## Quick start (any host)
+## Quick start
 
 ```ts
 import {
   compilePolicy,
   evaluateIntent,
+  createMemoryApprovalStore,
+  grantApproval,
+  signAllowToken,
+  assertAllowToken,
+  evaluatePostAction,
+  buildApprovalRequest,
   materializePolicyWorkspace,
 } from "blake-policy-agent";
 
@@ -31,51 +41,58 @@ const policy = compilePolicy({
   agentId: "your-agent-id",
   ownerId: "your-user-id",
   environment: "personal_private", // or hire_sandbox / org_private
-  enabled: true,
-  killSwitch: false,
-  reviewMode: "autonomous",
   autoMerge: false,
   connectors: [{ id: "github", tier: "write" }],
-  stops: "No send. No force-push.",
+  stops: "No force-push.",
 });
+// policy.policyHash is set — treat it as an artifact, not a prompt.
 
-await materializePolicyWorkspace("/path/to/workspace", policy);
-
+const approvals = createMemoryApprovalStore();
 const decision = evaluateIntent(
   {
     type: "git.merge",
     agentId: "your-agent-id",
     environment: "personal_private",
     connectorId: "github",
+    target: "main",
+    meta: { repo: "acme/app", branch: "main" },
   },
   policy,
-  { now: new Date().toISOString() },
+  {
+    now: new Date().toISOString(),
+    approvals,
+    signingSecret: process.env.BLAKE_POLICY_SECRET,
+  },
 );
 
 if (decision.effect === "require_approval") {
-  // open PR + notify the owner
+  const req = buildApprovalRequest({ decision, policy, channels: ["webhook"] });
+  // host delivers req → on approve:
+  grantApproval(approvals, decision.fingerprint, {
+    policyHash: policy.policyHash,
+  });
 }
-if (decision.effect === "deny") {
-  throw new Error(decision.reasons.join(" "));
+
+if (decision.effect === "allow" && decision.allowToken) {
+  assertAllowToken(decision.allowToken, policy, process.env.BLAKE_POLICY_SECRET!);
+  // only then merge / send
 }
+
+await materializePolicyWorkspace("/path/to/workspace", policy);
 ```
 
-See [`examples/foreign-host.mjs`](./examples/foreign-host.mjs) and [`INTEGRATING.md`](./INTEGRATING.md).
+See [`INTEGRATING.md`](./INTEGRATING.md) and `examples/`.
 
 ## CLI
 
 ```bash
 npx blake-policy compile --in source.json --out policy.json
-npx blake-policy evaluate --policy policy.json --intent intent.json
+npx blake-policy evaluate --policy policy.json --intent intent.json [--secret …]
 npx blake-policy materialize --policy policy.json --dir ./workspace
-
-# evaluate exit: 0 allow · 2 require_approval · 1 deny
-```
-
-After `materialize`, runners with only Node can:
-
-```bash
-node .blake-policy/gate.mjs '{"type":"git.merge","agentId":"…","environment":"personal_private","connectorId":"github"}'
+npx blake-policy fingerprint --intent intent.json
+npx blake-policy diff --before a.json --after b.json
+npx blake-policy hire-check
+npx blake-policy verify-token --policy p.json --token t.json --secret …
 ```
 
 ## Environments & secrets
@@ -86,14 +103,8 @@ node .blake-policy/gate.mjs '{"type":"git.merge","agentId":"…","environment":"
 | `org_private` | org secrets (not personal) |
 | `hire_sandbox` | hire-brokered only |
 
-Hire never sees personal keys (`evaluateSecretAccess`).
+`assertHireIsolation()` / `blake-policy hire-check` — CI matrix, not UI.
 
 ## Intent catalog
 
 `run.start` · `secret.read` · `git.push` · `git.force_push` · `git.open_pr` · `git.merge` · `mail.send` · `chat.send` · `outbound.publish`
-
-## What partners never need
-
-Blake account UI · Cursor API key (unless *they* use Cursor) · Blake disk layout.
-
-They keep their own scheduler, LLM, and GitHub client — **policy is the shared contract**.

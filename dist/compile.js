@@ -1,3 +1,4 @@
+import { withPolicyArtifact } from "./artifact.js";
 const TIER_RANK = {
     sandbox: 0,
     draft: 1,
@@ -24,7 +25,7 @@ export function compilePolicy(source) {
         .filter(Boolean)
         .slice(0, 40);
     const stopRules = [...new Set([...explicit, ...fromText])];
-    return {
+    const raw = {
         agentId: source.agentId.trim(),
         ownerId: source.ownerId.trim(),
         environment: source.environment ?? "personal_private",
@@ -43,6 +44,14 @@ export function compilePolicy(source) {
             .slice(0, 32),
         stopRules,
         window: source.window,
+        version: source.version,
+        previousHash: source.previousHash,
+        compiledAt: source.compiledAt,
     };
+    return withPolicyArtifact(raw, {
+        version: source.version ?? 1,
+        compiledAt: source.compiledAt,
+        previousHash: source.previousHash,
+    });
 }
 //# sourceMappingURL=compile.js.map

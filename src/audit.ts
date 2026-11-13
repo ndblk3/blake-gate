@@ -20,6 +20,7 @@ export function createMemoryAuditLog(max = 500): AuditLog {
         reasons: [...partial.reasons],
         rules: [...partial.rules],
         target: partial.target,
+        fingerprint: partial.fingerprint,
       };
       events.unshift(event);
       if (events.length > max) events.length = max;

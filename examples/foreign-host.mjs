@@ -1,19 +1,23 @@
 /**
- * Minimal adapter for a non-Blake host.
+ * Minimal adapter for a non-Blake host (Cursor CLI / Claude Code / GHA / custom).
  *
- * 1. Map YOUR user/agent config → PolicySource
- * 2. compilePolicy
- * 3. Before each dangerous tool call → evaluateIntent
- * 4. Switch on effect
+ * 1. Map YOUR config → PolicySource → compilePolicy (artifact + policyHash)
+ * 2. Before dangerous tools → evaluateIntent (+ durable approvals / allowToken)
+ * 3. On require_approval → buildApprovalRequest → your webhook/Slack
+ * 4. After the run → evaluatePostAction (prompt vs fact)
  */
 import {
   compilePolicy,
   evaluateIntent,
   createMemoryAuditLog,
+  createMemoryApprovalStore,
+  grantApproval,
+  buildApprovalRequest,
+  evaluatePostAction,
+  inferActionOccurred,
   materializePolicyWorkspace,
 } from "blake-policy-agent";
 
-// --- your product shapes (example) ---
 const yourAgent = {
   id: "job-42",
   accountId: "acct-9",
@@ -38,7 +42,10 @@ const policy = compilePolicy({
   stops: yourAgent.hardLimits,
 });
 
+console.log("policyHash", policy.policyHash);
+
 const audit = createMemoryAuditLog();
+const approvals = createMemoryApprovalStore();
 
 async function beforeTool(toolName, args) {
   const type =
@@ -58,26 +65,68 @@ async function beforeTool(toolName, args) {
       environment: "personal_private",
       connectorId: args.connector || "github",
       target: args.target,
+      meta: { repo: args.repo, branch: args.branch },
     },
     policy,
-    { now: new Date().toISOString() },
+    {
+      now: new Date().toISOString(),
+      approvals,
+      signingSecret: process.env.BLAKE_POLICY_SECRET,
+    },
     audit,
   );
 
-  if (decision.effect === "allow") return { ok: true, decision };
+  if (decision.effect === "allow") {
+    return { ok: true, decision };
+  }
   if (decision.effect === "require_approval") {
-    return {
-      ok: false,
-      needsHuman: true,
+    const request = buildApprovalRequest({
       decision,
-      // your app: open PR, Slack the owner, wait for button
-    };
+      policy,
+      channels: ["webhook"],
+    });
+    // your app: deliver request, then on human OK:
+    // grantApproval(approvals, decision.fingerprint, { policyHash: policy.policyHash });
+    return { ok: false, needsHuman: true, decision, request };
   }
   return { ok: false, needsHuman: false, decision };
 }
 
-// Optional: drop policy into the agent working directory
 await materializePolicyWorkspace("/tmp/my-agent-workspace", policy);
 
-const merge = await beforeTool("merge_pr", { connector: "github", target: "main" });
-console.log(merge);
+const merge = await beforeTool("merge_pr", {
+  connector: "github",
+  target: "main",
+  repo: "acme/app",
+  branch: "main",
+});
+console.log("before", merge);
+
+// Simulate owner approval ticket, then re-check:
+if (merge.decision?.fingerprint) {
+  grantApproval(approvals, merge.decision.fingerprint, {
+    policyHash: policy.policyHash,
+  });
+  const again = await beforeTool("merge_pr", {
+    connector: "github",
+    target: "main",
+    repo: "acme/app",
+    branch: "main",
+  });
+  console.log("after durable approval", again.decision?.effect, again.decision?.rules);
+}
+
+// Post-action: log claims a merge while gate said require_approval
+if (merge.decision) {
+  const log = "Merged pull request #12 into main";
+  const compliance = evaluatePostAction({
+    policy,
+    prior: merge.decision,
+    evidence: {
+      intentType: "git.merge",
+      occurred: inferActionOccurred("git.merge", log),
+      summary: log,
+    },
+  });
+  console.log("post-action", compliance.ok ? "ok" : compliance.violation?.summary);
+}
