@@ -1,6 +1,7 @@
 node_modules/
-dist/
 *.tsbuildinfo
 .DS_Store
 npm-debug.log*
 *.tgz
+# dist/ is committed so `npm i github:ndblk3/blake-policy-agent` works
+# without a local TypeScript toolchain.
