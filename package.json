@@ -1,6 +1,6 @@
 {
   "name": "blake-policy-agent",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Policy enforcement runtime for autonomous agents — intent fingerprints, proof-carrying allow, hire isolation, post-action compliance.",
   "type": "module",
   "main": "./dist/index.js",

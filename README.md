@@ -14,7 +14,7 @@ The model proposes **intents**. This package decides **allow / deny / require_ap
 
 **Docs (Blake):** [bl4k3.com/policy](https://bl4k3.com/policy)  
 **Repo:** [github.com/ndblk3/blake-policy-agent](https://github.com/ndblk3/blake-policy-agent)  
-**License:** Apache-2.0 · **npm:** `blake-policy-agent@0.2.0`
+**License:** Apache-2.0 · **npm:** `blake-policy-agent@0.2.1`
 
 ## Install
 
