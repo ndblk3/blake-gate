@@ -16,7 +16,7 @@ export function assertAllowed(decision, label = "intent") {
     if (decision.effect === "allow")
         return;
     const why = decision.reasons.join(" ") || decision.effect;
-    const err = new Error(`blake-policy blocked ${label}: ${why}`);
+    const err = new Error(`blake-gate blocked ${label}: ${why}`);
     err.code =
         decision.effect === "require_approval"
             ? "BLAKE_POLICY_APPROVAL"

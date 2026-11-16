@@ -1,4 +1,4 @@
-# Integrating blake-policy-agent into another system
+# Integrating blake-gate into another system
 
 You do **not** need Blake UI, Next.js, or Cursor. Ship this package and wrap the contract below.
 
@@ -21,7 +21,7 @@ Same package for: Cursor CLI · Claude Code · custom workers · GitHub Actions.
 | prior artifact hash | `previousHash` (optional) |
 
 ```ts
-import { compilePolicy, diffPolicies } from "blake-policy-agent";
+import { compilePolicy, diffPolicies } from "blake-gate";
 const policy = compilePolicy(yourMappedSource);
 // policy.policyHash / version / compiledAt — versioned artifact
 const changes = diffPolicies(previousPolicy, policy); // what changed for this agent
@@ -36,7 +36,7 @@ import {
   grantApproval,
   buildApprovalRequest,
   assertAllowToken,
-} from "blake-policy-agent";
+} from "blake-gate";
 
 const approvals = createMemoryApprovalStore(); // or your DB
 
@@ -78,7 +78,7 @@ switch (decision.effect) {
 ## 3. Audit after (post-action compliance)
 
 ```ts
-import { evaluatePostAction, inferActionOccurred } from "blake-policy-agent";
+import { evaluatePostAction, inferActionOccurred } from "blake-gate";
 
 const occurred = inferActionOccurred("git.merge", runLog);
 const { ok, violation } = evaluatePostAction({
@@ -104,11 +104,11 @@ node .blake-policy/gate.mjs '{"type":"git.merge",...}'
 ## 5. Hire isolation in CI
 
 ```bash
-npx blake-policy hire-check
+npx blake-gate hire-check
 ```
 
 ```ts
-import { assertHireIsolation } from "blake-policy-agent";
+import { assertHireIsolation } from "blake-gate";
 assertHireIsolation();
 ```
 

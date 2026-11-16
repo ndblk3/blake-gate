@@ -94,13 +94,13 @@ export function verifyAllowToken(token, policy, secret, opts) {
 /** Fail closed before a tool runs. */
 export function assertAllowToken(token, policy, secret, opts) {
     if (!token) {
-        const err = new Error(`blake-policy blocked ${opts?.label ?? "tool"}: missing allow-token`);
+        const err = new Error(`blake-gate blocked ${opts?.label ?? "tool"}: missing allow-token`);
         err.code = "BLAKE_POLICY_NO_TOKEN";
         throw err;
     }
     const check = verifyAllowToken(token, policy, secret, opts);
     if (!check.ok) {
-        const err = new Error(`blake-policy blocked ${opts?.label ?? "tool"}: ${check.reason}`);
+        const err = new Error(`blake-gate blocked ${opts?.label ?? "tool"}: ${check.reason}`);
         err.code = "BLAKE_POLICY_BAD_TOKEN";
         throw err;
     }

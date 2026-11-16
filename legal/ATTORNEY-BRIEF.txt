@@ -1,0 +1,24 @@
+Subject: US provisional — blake-policy-agent (intent fingerprint + proof-carrying allow)
+
+Hi —
+
+I’m seeking a US provisional utility filing for a software runtime that enforces policy for autonomous agents outside the LLM.
+
+One-liner:
+Model proposes structured intents; a host-independent runtime decides allow/deny/require_approval, issues HMAC allow-tokens bound to an intent fingerprint and a policy content hash, runners fail-closed without a verified token, durable approvals invalidate on policyHash drift, and a post-action check flags side-effects that occurred after deny/require_approval. Includes a hire/personal/org secret isolation matrix testable in CI.
+
+Embodiment: open-source npm package “blake-policy-agent” (Apache-2.0), first public git+npm 2026-11-13.
+Repo: https://github.com/ndblk3/blake-policy-agent
+Docs: https://bl4k3.com/policy
+
+Please review the attached /legal pack (invention disclosure, draft claims, prior-art notes). Highest priority prior art we already flagged: US 12,688,261 and US App. 2026/0244749 — we need differentiation and a fast provisional.
+
+Questions for kickoff:
+1) Provisional this week/next — feasible?
+2) Grace period given 2026-11-13 public release?
+3) Strategy with Apache-2.0 public distribution?
+
+Inventor/assignee details: [FILL IN]
+Best phone/time: [FILL IN]
+
+Thank you.

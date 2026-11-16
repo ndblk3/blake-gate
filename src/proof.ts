@@ -128,7 +128,7 @@ export function assertAllowToken(
 ): AllowToken {
   if (!token) {
     const err = new Error(
-      `blake-policy blocked ${opts?.label ?? "tool"}: missing allow-token`,
+      `blake-gate blocked ${opts?.label ?? "tool"}: missing allow-token`,
     );
     (err as Error & { code?: string }).code = "BLAKE_POLICY_NO_TOKEN";
     throw err;
@@ -136,7 +136,7 @@ export function assertAllowToken(
   const check = verifyAllowToken(token, policy, secret, opts);
   if (!check.ok) {
     const err = new Error(
-      `blake-policy blocked ${opts?.label ?? "tool"}: ${check.reason}`,
+      `blake-gate blocked ${opts?.label ?? "tool"}: ${check.reason}`,
     );
     (err as Error & { code?: string }).code = "BLAKE_POLICY_BAD_TOKEN";
     throw err;

@@ -24,7 +24,7 @@ const base = () =>
     stops: "No send, no merge",
   });
 
-describe("blake-policy-agent gate", () => {
+describe("blake-gate gate", () => {
   it("denies when kill switch is on", () => {
     const p = compilePolicy({
       agentId: "agt_1",
@@ -175,7 +175,7 @@ describe("blake-policy-agent gate", () => {
   });
 
   it("materializes policy + gate into a workspace", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "blake-policy-"));
+    const dir = await mkdtemp(path.join(tmpdir(), "blake-gate-"));
     try {
       const result = await materializePolicyWorkspace(dir, base());
       const raw = await readFile(result.policyPath, "utf8");

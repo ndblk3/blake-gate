@@ -2,13 +2,13 @@
 /**
  * CLI for foreign hosts / CI / other stacks.
  *
- *   blake-policy compile --in source.json --out policy.json
- *   blake-policy evaluate --policy policy.json --intent intent.json
- *   blake-policy materialize --policy policy.json --dir ./workspace
- *   blake-policy fingerprint --intent intent.json
- *   blake-policy diff --before a.json --after b.json
- *   blake-policy hire-check
- *   blake-policy verify-token --policy policy.json --token token.json --secret …
+ *   blake-gate compile --in source.json --out policy.json
+ *   blake-gate evaluate --policy policy.json --intent intent.json
+ *   blake-gate materialize --policy policy.json --dir ./workspace
+ *   blake-gate fingerprint --intent intent.json
+ *   blake-gate diff --before a.json --after b.json
+ *   blake-gate hire-check
+ *   blake-gate verify-token --policy policy.json --token token.json --secret …
  */
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -28,7 +28,7 @@ import type {
 } from "./types.js";
 
 function usage(): never {
-  console.error(`blake-policy — policy gate for autonomous agents
+  console.error(`blake-gate — policy gate for autonomous agents
 
 Commands:
   compile       --in <source.json> --out <policy.json>

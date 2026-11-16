@@ -16,7 +16,7 @@ import {
   evaluatePostAction,
   inferActionOccurred,
   materializePolicyWorkspace,
-} from "blake-policy-agent";
+} from "blake-gate";
 
 const yourAgent = {
   id: "job-42",
