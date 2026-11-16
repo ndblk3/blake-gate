@@ -28,7 +28,7 @@ export async function materializePolicyWorkspace(workspaceDir, policy) {
         environment: artifact.environment,
     })}\n`, "utf8");
     await writeFile(readmePath, [
-        "# blake-policy (local copy)",
+        "# blake-gate (local copy)",
         "",
         "Policy as artifact — not a prompt. Host compiles; runners verify.",
         "",
