@@ -9,6 +9,8 @@ export function canonicalizePolicy(policy) {
         killSwitch: policy.killSwitch,
         reviewMode: policy.reviewMode,
         autoMerge: policy.autoMerge,
+        agentSpawn: policy.agentSpawn ?? "deny",
+        agentReplicate: policy.agentReplicate ?? "deny",
         connectors: [...policy.connectors]
             .map((c) => ({ id: c.id, tier: c.tier }))
             .sort((a, b) => a.id.localeCompare(b.id)),
@@ -59,6 +61,8 @@ export function diffPolicies(before, after) {
     push("killSwitch", before.killSwitch, after.killSwitch);
     push("reviewMode", before.reviewMode, after.reviewMode);
     push("autoMerge", before.autoMerge, after.autoMerge);
+    push("agentSpawn", before.agentSpawn ?? "deny", after.agentSpawn ?? "deny");
+    push("agentReplicate", before.agentReplicate ?? "deny", after.agentReplicate ?? "deny");
     push("connectors", before.connectors, after.connectors);
     push("stopRules", before.stopRules, after.stopRules);
     push("window", before.window ?? null, after.window ?? null);

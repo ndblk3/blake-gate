@@ -188,4 +188,55 @@ describe("blake-policy-agent gate", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("defaults agent.replicate to deny (uncontrolled replication = 0)", () => {
+    const policy = base();
+    assert.equal(policy.agentReplicate, "deny");
+    assert.equal(policy.agentSpawn, "deny");
+    const d = evaluateIntent(
+      {
+        type: "agent.replicate",
+        agentId: "agt_1",
+        environment: "personal_private",
+        meta: { reason: "scale" },
+      },
+      policy,
+      { now: "2026-11-16T18:00:00.000Z" },
+    );
+    assert.equal(d.effect, "deny");
+    assert.ok(d.rules.includes("agent.replicate.deny"));
+    assert.ok(d.rules.includes("replication.uncontrolled_zero"));
+  });
+
+  it("requires approval to spawn when policy asks for it", () => {
+    const policy = compilePolicy({
+      agentId: "agt_1",
+      ownerId: "own_1",
+      connectors: [{ id: "github", tier: "write" }],
+      agentSpawn: "require_approval",
+    });
+    const pending = evaluateIntent(
+      {
+        type: "agent.spawn",
+        agentId: "agt_1",
+        environment: "personal_private",
+        target: "child-worker",
+      },
+      policy,
+      { now: "2026-11-16T18:00:00.000Z" },
+    );
+    assert.equal(pending.effect, "require_approval");
+    const allowed = evaluateIntent(
+      {
+        type: "agent.spawn",
+        agentId: "agt_1",
+        environment: "personal_private",
+        target: "child-worker",
+      },
+      policy,
+      { now: "2026-11-16T18:00:00.000Z", ownerApproved: true },
+    );
+    assert.equal(allowed.effect, "allow");
+    assert.ok(allowed.rules.includes("agent.spawn.authorized"));
+  });
 });

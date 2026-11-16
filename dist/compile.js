@@ -4,6 +4,12 @@ const TIER_RANK = {
     draft: 1,
     write: 2,
 };
+function replicationMode(value) {
+    if (value === "allow" || value === "require_approval" || value === "deny") {
+        return value;
+    }
+    return "deny";
+}
 export function trustAtLeast(have, need) {
     return TIER_RANK[have] >= TIER_RANK[need];
 }
@@ -43,6 +49,8 @@ export function compilePolicy(source) {
         }))
             .slice(0, 32),
         stopRules,
+        agentSpawn: replicationMode(source.agentSpawn),
+        agentReplicate: replicationMode(source.agentReplicate),
         window: source.window,
         version: source.version,
         previousHash: source.previousHash,

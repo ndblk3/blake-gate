@@ -120,6 +120,19 @@ function decide() {
   if (intent.type === "git.force_push") {
     return out("deny", ["Force-push hard stop"], ["git.force_push_hard_stop"]);
   }
+  if (intent.type === "agent.spawn" || intent.type === "agent.replicate") {
+    const mode = intent.type === "agent.spawn"
+      ? (policy.agentSpawn || "deny")
+      : (policy.agentReplicate || "deny");
+    const base = intent.type === "agent.spawn" ? "agent.spawn" : "agent.replicate";
+    if (mode === "deny") {
+      return out("deny", ["Replication intent denied by policy"], [base + ".deny", "replication.uncontrolled_zero"]);
+    }
+    if (mode === "require_approval" && !ownerApproved) {
+      return out("require_approval", ["Replication requires owner approval"], [base + ".require_approval"]);
+    }
+    return out("allow", ["Replication authorized by policy"], [base + ".authorized"]);
+  }
   if (practice && WRITE.has(intent.type)) {
     return out("deny", ["Practice cannot write"], ["practice.no_write"]);
   }

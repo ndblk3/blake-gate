@@ -1,7 +1,7 @@
 {
   "name": "blake-policy-agent",
-  "version": "0.2.1",
-  "description": "Policy enforcement runtime for autonomous agents — intent fingerprints, proof-carrying allow, hire isolation, post-action compliance.",
+  "version": "0.3.0",
+  "description": "Policy enforcement runtime for autonomous agents — intent fingerprints, proof-carrying allow, hire isolation, spawn/replicate gates, post-action compliance. Part of blake-guard.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -42,14 +42,16 @@
   "bugs": {
     "url": "https://github.com/ndblk3/blake-policy-agent/issues"
   },
-  "homepage": "https://bl4k3.com/policy",
+  "homepage": "https://bl4k3.com/policy-agent",
   "keywords": [
     "agents",
     "policy",
     "guardrails",
     "autonomous",
     "blake",
-    "intent-gate"
+    "blake-guard",
+    "intent-gate",
+    "replication"
   ],
   "author": "Blake / bl4k3.com",
   "devDependencies": {

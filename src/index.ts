@@ -18,6 +18,7 @@ export type {
   PolicyDiff,
   PolicyFieldChange,
   PolicySource,
+  ReplicationMode,
   ReviewMode,
   TrustTier,
   ViolationEvent,

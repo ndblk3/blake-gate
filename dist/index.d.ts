@@ -1,4 +1,4 @@
-export type { ActionEvidence, AgentEnvironment, AgentIntent, AllowToken, ApprovalChannel, ApprovalRequest, AuditEvent, AuditLog, CompiledPolicy, ConnectorGrant, DecisionEffect, GateContext, GateDecision, HostKind, IntentFingerprint, IntentType, PolicyDiff, PolicyFieldChange, PolicySource, ReviewMode, TrustTier, ViolationEvent, } from "./types.js";
+export type { ActionEvidence, AgentEnvironment, AgentIntent, AllowToken, ApprovalChannel, ApprovalRequest, AuditEvent, AuditLog, CompiledPolicy, ConnectorGrant, DecisionEffect, GateContext, GateDecision, HostKind, IntentFingerprint, IntentType, PolicyDiff, PolicyFieldChange, PolicySource, ReplicationMode, ReviewMode, TrustTier, ViolationEvent, } from "./types.js";
 export { HOST_CONTRACT_VERSION } from "./types.js";
 export type { SecretDecision, SecretRequest, SecretScope, } from "./credentials.js";
 export type { DurableApproval, ApprovalStore } from "./approvals.js";

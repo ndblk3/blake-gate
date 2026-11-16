@@ -1,20 +1,25 @@
 # blake-policy-agent
 
-Policy enforcement runtime for autonomous agents.
+Policy enforcement runtime for autonomous agents. Part of **blake-guard**.
 
 The model proposes **intents**. This package decides **allow / deny / require_approval** — outside the LLM — with:
 
 1. **Intent fingerprints + durable approval** — capability tickets, not chat moderation  
 2. **Proof-carrying allow** — signed `allowToken`; runner/CI verifies before merge/send  
 3. **Hire / dual-env isolation** — testable compliance suite (`blake-policy hire-check`)  
-4. **Post-action compliance** — gate before, audit after; prompt ≠ fact → violation  
-5. **Policy as artifact** — versioned `policy.json` + hash + diffs  
-6. **Cross-host contract** — Cursor CLI · Claude Code · custom workers · GitHub Actions  
-7. **ApprovalRequest** — thin delivery adapters (webhook / email / Slack); core stays runtime  
+4. **Spawn / replicate gates** — `agent.spawn` · `agent.replicate` default **deny** (uncontrolled replication = 0)  
+5. **Post-action compliance** — gate before, audit after; prompt ≠ fact → violation  
+6. **Policy as artifact** — versioned `policy.json` + hash + diffs  
+7. **Cross-host contract** — Cursor CLI · Claude Code · custom workers · GitHub Actions  
+8. **ApprovalRequest** — thin delivery adapters (webhook / email / Slack); core stays runtime  
 
-**Docs (Blake):** [bl4k3.com/policy](https://bl4k3.com/policy)  
+**Docs:** [bl4k3.com/policy-agent](https://bl4k3.com/policy-agent) · **Suite:** [blake-guard](https://bl4k3.com/guard) · [space-access](https://bl4k3.com/space-access) · [compliance-log](https://bl4k3.com/compliance-log)  
 **Repo:** [github.com/ndblk3/blake-policy-agent](https://github.com/ndblk3/blake-policy-agent)  
-**License:** Apache-2.0 · **npm:** `blake-policy-agent@0.2.1`
+**License:** Apache-2.0 · **npm:** `blake-policy-agent@0.3.0`
+
+## Patent prep (US)
+
+Attorney-ready drafts (not a filing): [`legal/`](./legal/) — invention disclosure, claim candidates, disclosure timeline (first public **2026-11-13**), prior-art notes, USPTO checklist.
 
 ## Install
 

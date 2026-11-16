@@ -1,11 +1,25 @@
 import { withPolicyArtifact } from "./artifact.js";
-import type { CompiledPolicy, PolicySource, TrustTier } from "./types.js";
+import type {
+  CompiledPolicy,
+  PolicySource,
+  ReplicationMode,
+  TrustTier,
+} from "./types.js";
 
 const TIER_RANK: Record<TrustTier, number> = {
   sandbox: 0,
   draft: 1,
   write: 2,
 };
+
+function replicationMode(
+  value: ReplicationMode | undefined,
+): ReplicationMode {
+  if (value === "allow" || value === "require_approval" || value === "deny") {
+    return value;
+  }
+  return "deny";
+}
 
 export function trustAtLeast(have: TrustTier, need: TrustTier): boolean {
   return TIER_RANK[have] >= TIER_RANK[need];
@@ -49,6 +63,8 @@ export function compilePolicy(source: PolicySource): CompiledPolicy {
       }))
       .slice(0, 32),
     stopRules,
+    agentSpawn: replicationMode(source.agentSpawn),
+    agentReplicate: replicationMode(source.agentReplicate),
     window: source.window,
     version: source.version,
     previousHash: source.previousHash,

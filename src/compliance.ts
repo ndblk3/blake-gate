@@ -99,6 +99,16 @@ export function inferActionOccurred(
   ) {
     return /\bsent (email|message)\b|\bpublished\b|\bposted to\b/.test(t);
   }
+  if (intentType === "agent.spawn") {
+    return /\bspawned (agent|worker|child)\b|\bcreated (new )?agent\b|\bagent\.spawn\b/.test(
+      t,
+    );
+  }
+  if (intentType === "agent.replicate") {
+    return /\breplicated\b|\bself[- ]?replicat|\bagent\.replicate\b|\bpopulation (grew|scaled)\b/.test(
+      t,
+    );
+  }
   return false;
 }
 

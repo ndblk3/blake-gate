@@ -3,8 +3,14 @@ export type AgentEnvironment = "personal_private" | "org_private" | "hire_sandbo
 /** Staged trust for a connector — practice → drafts → write. */
 export type TrustTier = "sandbox" | "draft" | "write";
 export type ReviewMode = "notify" | "autonomous";
+/**
+ * How spawn / replicate are treated.
+ * Default is `deny` — uncontrolled replication rate stays 0 unless the owner
+ * explicitly authorizes the mode on the policy artifact.
+ */
+export type ReplicationMode = "deny" | "require_approval" | "allow";
 /** Actions an agent may request. Gate decides; model does not. */
-export type IntentType = "run.start" | "secret.read" | "git.push" | "git.force_push" | "git.open_pr" | "git.merge" | "mail.send" | "chat.send" | "outbound.publish";
+export type IntentType = "run.start" | "secret.read" | "git.push" | "git.force_push" | "git.open_pr" | "git.merge" | "mail.send" | "chat.send" | "outbound.publish" | "agent.spawn" | "agent.replicate";
 export type AgentIntent = {
     type: IntentType;
     agentId: string;
@@ -31,6 +37,16 @@ export type CompiledPolicy = {
     connectors: ConnectorGrant[];
     /** Free-text hard stops from the owner (matched as keywords). */
     stopRules: string[];
+    /**
+     * Create a new agent / child worker.
+     * Default `deny` — never spawn outside policy.
+     */
+    agentSpawn: ReplicationMode;
+    /**
+     * Copy / self-replicate an agent population.
+     * Default `deny` — uncontrolled replication = 0.
+     */
+    agentReplicate: ReplicationMode;
     /** Optional schedule window — ISO times; empty = always. */
     window?: {
         /** HH:mm local to timezone */
@@ -125,6 +141,10 @@ export type PolicySource = {
     /** Raw owner stop text — split into rules. */
     stops?: string;
     stopRules?: string[];
+    /** Default deny. */
+    agentSpawn?: ReplicationMode;
+    /** Default deny — zero uncontrolled replication. */
+    agentReplicate?: ReplicationMode;
     window?: CompiledPolicy["window"];
     version?: number;
     previousHash?: string;

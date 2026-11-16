@@ -62,6 +62,12 @@ function stopHits(policy: CompiledPolicy, intent: AgentIntent): string[] {
       (intent.type === "git.merge" && /\bno merge\b|do not merge|don't merge/i.test(rule)) ||
       (intent.type === "mail.send" && /\bno send\b|do not send|don't send|no outbound/i.test(rule)) ||
       (intent.type === "outbound.publish" && /no publish|do not publish/i.test(rule)) ||
+      (intent.type === "agent.spawn" &&
+        /\bno spawn\b|do not spawn|don't spawn|no new agent/i.test(rule)) ||
+      (intent.type === "agent.replicate" &&
+        /\bno replicate\b|do not replicate|don't replicate|no self[- ]?replicat/i.test(
+          rule,
+        )) ||
       (key.length >= 4 && blob.includes(key.slice(0, 48)))
     ) {
       hits.push(rule);
@@ -143,6 +149,66 @@ function decide(
       reasons: ["Force-push to protected history is a hard stop."],
       rules: ["git.force_push_hard_stop"],
     };
+  }
+
+  if (intent.type === "agent.spawn" || intent.type === "agent.replicate") {
+    const mode =
+      intent.type === "agent.spawn"
+        ? (policy.agentSpawn ?? "deny")
+        : (policy.agentReplicate ?? "deny");
+    const ruleBase =
+      intent.type === "agent.spawn" ? "agent.spawn" : "agent.replicate";
+    const stopHit = stopHits(policy, intent);
+    if (stopHit.length > 0) {
+      return {
+        effect: "deny",
+        intent,
+        reasons: stopHit.map((rule) => `Stop rule: ${rule}`),
+        rules: ["owner.stop_rule", `${ruleBase}.stop`],
+      };
+    }
+    if (mode === "deny") {
+      return {
+        effect: "deny",
+        intent,
+        reasons: [
+          intent.type === "agent.replicate"
+            ? "Uncontrolled replication is denied — agent.replicate is off on this policy."
+            : "Agent spawn is denied — agent.spawn is off on this policy.",
+        ],
+        rules: [`${ruleBase}.deny`, "replication.uncontrolled_zero"],
+      };
+    }
+    const durableOk =
+      context.approvals?.has(fingerprint, {
+        now: context.now,
+        policyHash: hash,
+      }) === true;
+    if (mode === "require_approval" && !context.ownerApproved && !durableOk) {
+      return {
+        effect: "require_approval",
+        intent,
+        reasons: [
+          intent.type === "agent.replicate"
+            ? "Replication requires an explicit owner approval ticket."
+            : "Spawning a new agent requires an explicit owner approval ticket.",
+        ],
+        rules: [`${ruleBase}.require_approval`],
+      };
+    }
+    reasons.push(
+      durableOk && !context.ownerApproved
+        ? "Durable approval ticket authorizes this replication intent."
+        : mode === "allow"
+          ? "Policy authorizes this replication intent."
+          : "Owner approved this replication intent.",
+    );
+    rules.push(
+      durableOk && !context.ownerApproved
+        ? "approval.durable"
+        : `${ruleBase}.authorized`,
+    );
+    return { effect: "allow", intent, reasons, rules };
   }
 
   if (context.practice && WRITE_INTENTS.includes(intent.type)) {
