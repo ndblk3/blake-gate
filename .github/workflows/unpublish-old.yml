@@ -1,0 +1,24 @@
+name: unpublish-old
+
+on:
+  workflow_dispatch:
+
+jobs:
+  unpublish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+      - name: Unpublish renamed packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set +e
+          for pkg in blake-policy-agent blake-space-access blake-compliance-log; do
+            echo "=== unpublish $pkg ==="
+            npm unpublish "$pkg" --force 2>&1
+            echo "exit=$?"
+            npm view "$pkg" version 2>&1 || echo "$pkg gone"
+          done
