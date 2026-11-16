@@ -12,14 +12,10 @@ jobs:
         include:
           - repo: blake-witness
           - repo: blake-trail
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           repository: ndblk3/${{ matrix.repo }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -27,6 +23,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm publish --access public --provenance
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  retag-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+      - name: Point latest at blake-gate@0.4.0
+        run: npm dist-tag add blake-gate@0.4.0 latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
