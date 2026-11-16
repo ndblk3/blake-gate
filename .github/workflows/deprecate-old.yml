@@ -1,0 +1,20 @@
+name: deprecate-old
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deprecate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://registry.npmjs.org
+      - name: Deprecate old package names
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm deprecate blake-policy-agent@"*" "Package renamed to blake-gate. Use: npm i blake-gate"
+          npm deprecate blake-space-access@"*" "Package renamed to blake-witness. Use: npm i blake-witness"
+          npm deprecate blake-compliance-log@"*" "Package renamed to blake-trail. Use: npm i blake-trail"
